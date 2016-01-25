@@ -1,0 +1,14 @@
+{
+        "config":{
+                "server":{
+                        "interface": "",
+                        "port": "",
+                        "log_file": ""
+                },
+                "image":{
+                        "user": "",
+                        "repository":"",
+                        "tag": ""
+                }
+        }
+}
