@@ -23,6 +23,7 @@ router.get('/:id/details', function(req, res, next) {
 });
 
 //POST add a class
+//{"name": "", "description": ""}
 router.post('/', function(req, res) {
     var db = req.db;
     var collection = db.get('classes');
@@ -42,6 +43,7 @@ router.delete('/:id', function(req, res) {
 });
 
 //PUT update one or more attribute of a class (name, description)
+//"{"name": "", "description": ""}
 router.put('/:id', function(req, res) {
     var extend = require('util')._extend
     var db = req.db;
