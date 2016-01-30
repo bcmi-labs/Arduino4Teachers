@@ -1,3 +1,11 @@
+/*
+ * Apache License
+ *                           Version 2.0, January 2004
+ *                        http://www.apache.org/licenses/
+ * 
+ * Copyright (c) 2016 Francesco Longo
+ */
+
 var express = require('express');
 var path = require('path');
 var favicon = require('serve-favicon');

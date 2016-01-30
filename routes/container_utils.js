@@ -8,7 +8,7 @@
 
 //reading configuration file
 var nconf = require('nconf');
-nconf.file ({file: process.cwd()+'/settings.json'});
+nconf.file ({file: process.cwd()+'/routes/settings.json'});
 var image_user = nconf.get('config:image:user');
 var image_repository = nconf.get('config:image:repository');
 var image_tag = nconf.get('config:image:tag');
@@ -22,47 +22,40 @@ container_utils = function(){
 };
 
 container_utils.prototype.create_container = function (container_name, password, callback) {
-    
     var portfinder = require('portfinder');
-    
     portfinder.getPort(function (err, container_port) {
-        
         if(err){
-            
             callback(err, null);
         }
         else{
-            
             var port_json = { "80/tcp": [{ HostPort: container_port.toString() }] };
             var parameters = {Image: image_name, Cmd: [], name: container_name, PortBindings: port_json};
-            
             docker.createContainer(parameters, function (err, container) {
-                
                 if(err){
-                    
                     callback(err, null);
                 }
                 else{
                     container.start(function (err, data) {
-                        
                         if(err){
-                            
-                            callback(err, null)
+                            callback(err, null);
                         }
                         else{
-                            
                             const exec = require('child_process').exec;
-                            
-                            const child = exec('./utils/change_password.sh '+ password + ' ' + container_name, function(err,stdout,stderr){
+                            const child = exec(process.cwd()+'/utils/change_password.sh '+ password + ' ' + container_name, function(err,stdout,stderr){
                                 if (err) {
-                                    
+                                    console.log(process.cwd()+'/utils/change_password.sh '+ password + ' ' + container_name);
                                     callback(err, null);
                                 }
                                 else{
-                                    
-                                    var result={"container_port": container_port.toString() };
-                                    
-                                    callback(null, result);
+                                    container.stop(function (err, data){
+                                        if(err){
+                                            callback(err, null);
+                                        }
+                                        else{
+                                            var result={"container_port": container_port.toString() };
+                                            callback(null, result);
+                                        }
+                                    });                                    
                                 }
                             }); 
                         }

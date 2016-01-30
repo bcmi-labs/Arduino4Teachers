@@ -1,6 +1,16 @@
+/*
+ * Apache License
+ *                           Version 2.0, January 2004
+ *                        http://www.apache.org/licenses/
+ * 
+ * Copyright (c) 2016 Francesco Longo
+ */
+
 var express = require('express');
 var router = express.Router();
+
 var container_utils = require('./container_utils');
+var container = new container_utils;
 
 //list all environments, list all environments for a student, create an environment for a student, start an environments, stop an environments, remove an environments, update an attribute (name, description) 
 
@@ -23,7 +33,6 @@ router.get('/:id/details', function(req, res, next) {
     });
 });
 
-
 //GET list of all the environments for a student
 router.get('/owner/:id', function(req, res, next) {
     var db = req.db;
@@ -40,6 +49,7 @@ router.get('/owner/:id', function(req, res, next) {
 });
 
 //PUT update one or more attribute of an environment (name, description)
+//{"name": "", "description": ""}
 router.put('/:id', function(req, res) {
     var extend = require('util')._extend
     var db = req.db;
@@ -53,11 +63,43 @@ router.put('/:id', function(req, res) {
 });
 
 //POST create an environments for a student
+//{"name": "", "description": "", "status": "", "owner": ""}
 router.post('/', function(req, res) {
+    
     var db = req.db;
-    var collection = db.get('environments');
-    collection.insert(req.body, function(err, docs){
-        res.json((err === null) ? { '_id': docs._id } : { msg: err });
+    var collection_environments = db.get('environments');
+    var collection_students = db.get('students');
+    var extend = require('util')._extend
+    
+    collection_students.findOne({_id: req.body.owner}, function(err, student){
+        
+        if(err){
+            res.json({error: err});
+        }
+        else{
+            
+            var container_name = req.body.owner + "." + req.body.name;
+            
+            container.create_container(container_name, student.password, function(err, result){
+                
+                if(err){
+                    res.json({error: err});
+                }
+                else{
+                    
+                    var container_port = result.container_port;
+                    
+                    var output = extend({},{ 'port' : container_port });
+                    extend(req.body, output);
+                    
+                    collection_environments.insert(req.body, function(err, docs){
+                        
+                        res.json((err === null) ? { '_id': docs._id } : { msg: err });
+                        
+                    });  
+                }  
+            });
+        } 
     });
 });
 
@@ -65,22 +107,72 @@ router.post('/', function(req, res) {
 router.delete('/:id', function(req, res) {
     var db = req.db;
     var collection = db.get('environments');
-    var environmentToDelete = req.params.id;
-    collection.remove({ '_id' : environmentToDelete }, function(err,docs) {
-        res.json((err === null) ? {} : { msg:'error: ' + err });
-    });
+    var environmentToDelete = req.params.id;    
+    collection.findOne({ '_id' : environmentToDelete }, function(err, environment){
+        if(err){
+            res.json({error: err});
+        }
+        else{
+            var environment_name = environment.name;
+            var environment_owner = environment.owner;
+            var container_name = environment_owner + "." + environment_name;
+            container.destroy_container(container_name, function(err, result){ 
+                if(err){
+                    res.json({error: err});                
+                }
+                else{
+                    collection.remove({ '_id' : environmentToDelete }, function(err) {
+                        res.json((err === null) ? {} : { msg:'error: ' + err });
+                    });                
+                    
+                } 
+            });                
+        }
+    });    
 });
 
 //PUT start/stop an environment
 router.put('/:id/status/:status', function(req, res) {
     var db = req.db;
+    var collection = db.get('environments');
     var environmentToModify = req.params.id;
     var newStatus = req.params.status;
-    var collection = db.get('environments');
-    collection.update({ '_id' : environmentToModify }, {$set: {status: newStatus}}, function(err) {
-        res.json((err === null) ? {_id: environmentToModify, status: newStatus}  : { msg:'error: ' + err });
-    });
+    
+    collection.findOne({ '_id' : environmentToModify }, function(err, environment){
+        if(err){
+            res.json({error: err});
+        }
+        else{
+            var environment_name = environment.name;
+            var environment_owner = environment.owner;
+            var container_name = environment_owner + "." + environment_name;
+            if(newStatus == 'start'){
+                container.start_container(container_name, function(err, result){ 
+                    if(err){
+                        res.json({error: err});                
+                    }
+                    else{
+                        collection.update({ '_id' : environmentToModify }, {$set: {status: newStatus}}, function(err) {
+                            res.json((err === null) ? {_id: environmentToModify, status: newStatus}  : { msg:'error: ' + err });
+                        });                
+                        
+                    } 
+                });                
+            }
+            else if(newStatus == 'stop'){
+                container.stop_container(container_name, function(err, result){ 
+                    if(err){
+                        res.json({error: err});                
+                    }
+                    else{
+                        collection.update({ '_id' : environmentToModify }, {$set: {status: newStatus}}, function(err) {
+                            res.json((err === null) ? {_id: environmentToModify, status: newStatus}  : { msg:'error: ' + err });
+                        });                     
+                    } 
+                });
+            }
+        }
+    });    
 });
-
 
 module.exports = router;
