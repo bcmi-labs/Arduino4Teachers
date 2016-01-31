@@ -24,7 +24,7 @@ Student access panel:
 
 |Method    |URL                                           |Semantics                        |Parameters                            |Return Type         |
 |----------|----------------------------------------------|---------------------------------|--------------------------------------|--------------------|
-| `GET`    | /classes                                     | list of all classes             |                                      | array of class     | 
+| `GET`    | /classes                                     | list of all classes             | -                                    | array of class     | 
 | `GET`    | /classes/(class_uuid)                        | details about a class           | class_uuid (url)                     | class              |
 | `POST`   | /classes                                     | create a class                  | class (body)                         | class              | 
 | `DELETE` | /classes/(class_uuid)                        | remove a class                  | class_uuid (url)                     | -                  | 
@@ -33,7 +33,27 @@ Student access panel:
 | `PUT`    | /classes/(class_uuid/students                | add a student in a class        | class_uuid (url), student (body)     | class              | 
 | `DELETE` | /classes/(class_uuid/students/(student_uuid) | remove a student from a class   | class_uuid (url), student_uuid (url) | class              |   
 
+### Students
 
+|Method    |URL                                           |Semantics                        |Parameters                            |Return Type         |
+|----------|----------------------------------------------|---------------------------------|--------------------------------------|--------------------|
+| `GET`    | /students                                    | list of all students            | -                                    | array of student   | 
+| `GET`    | /students/(student_uuid)                     | details about a student         | student_uuid (url)                   | student            |
+| `POST`   | /students                                    | create a student                | student (body)                       | student            | 
+| `DELETE` | /students/(student_uuid)                     | remove a student                | student_uuid (url)                   | -                  | 
+| `PUT`    | /students/(student_uuid)                     | change student information      | student_uuid (url), student (body)   | student            |
+
+### Environments
+
+|Method    |URL                                                   |Semantics                                 |Parameters                                  |Return Type           |
+|----------|------------------------------------------------------|------------------------------------------|--------------------------------------------|----------------------|
+| `GET`    | /environments                                        | list of all environments                 | -                                          | array of environment | 
+| `GET`    | /environments/(environment_uuid)                     | details about an environments            | environment_uuid (url)                     | environment          |
+| `POST`   | /environments                                        | create an environment                    | environment (body)                         | environment          | 
+| `DELETE` | /environments/(environment_uuid)                     | remove an environment                    | environment_uuid (url)                     | -                    | 
+| `PUT`    | /environments/(environment_uuid)/status/{start|stop} | start/stop and environment               | environment_uuid (url)                     | environment          | 
+| `PUT`    | /environments/(environment_uuid)                     | change environment information           | environment_uuid (url), environment (body) | student              |
+| `GET`    | /environments/owner/(student_uuid)                   | list of all the environment for a student| student_uuid (url)                         | array of environment | 
   
 ### Students
 

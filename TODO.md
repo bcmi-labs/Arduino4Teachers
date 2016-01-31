@@ -1,4 +1,6 @@
-Arduino4Teachers ToDo list:
+# Arduino4Teachers ToDo list
+
+## REST APIs
 
  * fix portfinder: put a wrapper that controls that port already assigned to stopped containers are not picked up again when creating new containers
  * put the configuration file in a global position
@@ -12,3 +14,6 @@ Arduino4Teachers ToDo list:
  * in the "list of all the environments for a student" operation return an error if the student does not exist
  * in the "create an environments for a student" and "delete an environments for a student" return an error if the student does not exist
  * in the "start/stop an environment" return an error if the environment does not exist
+ * when a student is deleted, she should be removed from her classes and her environments should be removed
+ * implement authentication for all the operations (the teacher should be able to perform all the operations while students should be able to perform operations only on their environments)
+ * check and correct the return types for all the REST APIs
