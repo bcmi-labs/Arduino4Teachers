@@ -54,10 +54,5 @@ Student access panel:
 | `PUT`    | /environments/(environment_uuid)/status/{start|stop} | start/stop and environment               | environment_uuid (url)                     | environment          | 
 | `PUT`    | /environments/(environment_uuid)                     | change environment information           | environment_uuid (url), environment (body) | student              |
 | `GET`    | /environments/owner/(student_uuid)                   | list of all the environment for a student| student_uuid (url)                         | array of environment | 
-  
-### Students
-
-### Environments
-
 
 
