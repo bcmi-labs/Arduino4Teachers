@@ -2,7 +2,6 @@
 
 ## REST APIs
 
- * fix portfinder: put a wrapper that controls that port already assigned to stopped containers are not picked up again when creating new containers
  * put the configuration file in a global position
  * choose what fields to provide in the general list and what field to provide in the details for each resource (class, student, environment)
  * decide if delete operations should return an error if the element to delete does not exist
@@ -17,3 +16,6 @@
  * when a student is deleted, she should be removed from her classes and her environments should be removed
  * implement authentication for all the operations (the teacher should be able to perform all the operations while students should be able to perform operations only on their environments)
  * check and correct the return types for all the REST APIs
+ * insert information about types in the README file
+ * ~~fix portfinder: put a wrapper that controls that port already assigned to stopped containers are not picked up again when creating new containers~~
+ 

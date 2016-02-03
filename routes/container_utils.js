@@ -21,50 +21,41 @@ var docker = new dockerode();
 container_utils = function(){
 };
 
-container_utils.prototype.create_container = function (container_name, password, callback) {
-    var portfinder = require('portfinder');
-    portfinder.getPort(function (err, container_port) {
+container_utils.prototype.create_container = function (container_name, container_password, container_port, callback) {
+    var port_json = { "80/tcp": [{ HostPort: container_port.toString() }] };
+    var parameters = {Image: image_name, Cmd: [], name: container_name, PortBindings: port_json};
+    docker.createContainer(parameters, function (err, container) {
         if(err){
             callback(err, null);
         }
         else{
-            var port_json = { "80/tcp": [{ HostPort: container_port.toString() }] };
-            var parameters = {Image: image_name, Cmd: [], name: container_name, PortBindings: port_json};
-            docker.createContainer(parameters, function (err, container) {
+            container.start(function (err, data) {
                 if(err){
                     callback(err, null);
                 }
                 else{
-                    container.start(function (err, data) {
-                        if(err){
+                    const exec = require('child_process').exec;
+                    const child = exec(process.cwd()+'/utils/change_password.sh '+ container_password + ' ' + container_name, function(err,stdout,stderr){
+                        if (err) {
+                            console.log(process.cwd()+'/utils/change_password.sh '+ container_password + ' ' + container_name);
                             callback(err, null);
                         }
                         else{
-                            const exec = require('child_process').exec;
-                            const child = exec(process.cwd()+'/utils/change_password.sh '+ password + ' ' + container_name, function(err,stdout,stderr){
-                                if (err) {
-                                    console.log(process.cwd()+'/utils/change_password.sh '+ password + ' ' + container_name);
+                            container.stop(function (err, data){
+                                if(err){
                                     callback(err, null);
                                 }
                                 else{
-                                    container.stop(function (err, data){
-                                        if(err){
-                                            callback(err, null);
-                                        }
-                                        else{
-                                            var result={"container_port": container_port.toString() };
-                                            callback(null, result);
-                                        }
-                                    });                                    
+                                    callback(null, data);
                                 }
-                            }); 
+                            });                                    
                         }
                     }); 
                 }
-            });
+            }); 
         }
     });
-};
+}
 
 container_utils.prototype.start_container = function (container_name, callback) {
     

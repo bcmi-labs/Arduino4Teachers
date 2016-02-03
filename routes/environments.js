@@ -80,26 +80,34 @@ router.post('/', function(req, res) {
             
             var container_name = req.body.owner + "." + req.body.name;
             
-            container.create_container(container_name, student.password, function(err, result){
-                
+            var nu = require('./network_utils');
+            var network_utils = new nu;
+            network_utils.get_free_port(db, function (err, container_port) {
                 if(err){
-                    res.json({error: err});
+                    callback(err, null);
                 }
                 else{
                     
-                    var container_port = result.container_port;
-                    
-                    var output = extend({},{ 'port' : container_port });
-                    extend(req.body, output);
-                    
-                    collection_environments.insert(req.body, function(err, docs){
+                    container.create_container(container_name, student.password, container_port, function(err, result){
                         
-                        res.json((err === null) ? { '_id': docs._id } : { msg: err });
-                        
-                    });  
-                }  
+                        if(err){
+                            res.json({error: err});
+                        }
+                        else{
+                            
+                            var output = extend({},{ 'port' : container_port });
+                            extend(req.body, output);
+                            
+                            collection_environments.insert(req.body, function(err, docs){
+                                
+                                res.json((err === null) ? { '_id': docs._id } : { msg: err });
+                                
+                            });  
+                        }  
+                    });
+                }
             });
-        } 
+        }
     });
 });
 

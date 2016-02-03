@@ -1,10 +1,10 @@
 /*
-Apache License
-                           Version 2.0, January 2004
-                        http://www.apache.org/licenses/
-
-Copyright (c) 2016 Francesco Longo
-*/
+ * Apache License
+ *                           Version 2.0, January 2004
+ *                        http://www.apache.org/licenses/
+ * 
+ * Copyright (c) 2016 Francesco Longo
+ */
 
 var networkInterfaces = require('os').networkInterfaces();
 
@@ -21,9 +21,29 @@ network_utils.prototype.get_ip_address = function (interface, version) {
             }
         }
     }
-
     return ip;
 };
 
+
+network_utils.prototype.get_free_port = function (db, callback) {
+    var collection = db.get('environments');
+    collection.findOne({}, { limit :1 , sort : { port : -1 } }, function (err,res) {     
+        if(err){
+            callback(err, null);
+        }
+        else{
+            var portfinder = require('portfinder');
+            portfinder.basePort = parseInt(res.port, 10) + 1;
+            portfinder.getPort(function (err, free_port) {
+                if(err){
+                    callback(err, null);
+                }
+                else{
+                    callback(null,free_port);
+                }
+            });   
+        }
+    });
+}
 
 module.exports = network_utils;
