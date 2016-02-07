@@ -6,19 +6,31 @@ var router = express.Router();
 //GET list of all classes
 router.get('/', function(req, res, next) {
     var db = req.db;
-    var collection = db.get('classes');
-    collection.find({},{},function(err,docs){
-        res.json(docs);
+    var classes = db.get('classes');
+    classes.find({},{fields : {name: 1}},function(err,myClasses){
+        if(err){
+            res.json({error: err});
+        }
+        else{
+            res.json(myClasses);
+        }
     });
 });
 
 //GET details of a class
-router.get('/:id/details', function(req, res, next) {
+router.get('/:id/', function(req, res, next) {
     var db = req.db;
-    var collection = db.get('classes');
+    var classes = db.get('classes');
     var classToShow = req.params.id;
-    collection.find({ '_id': classToShow },{},function(err,docs){
-        res.json(docs);
+    classes.findOne({ _id: classToShow },{},function(err,myClass){
+        if(err){
+            res.json({error: err});
+        }
+        else if(myClass == null){
+            res.status(404).json({ error: "Class with id '" + classToShow + "' does not exist."});
+        }else{            
+            res.json(myClass);
+        }
     });
 });
 
@@ -26,55 +38,84 @@ router.get('/:id/details', function(req, res, next) {
 //{"name": "", "description": ""}
 router.post('/', function(req, res) {
     var db = req.db;
-    var collection = db.get('classes');
-    collection.insert(req.body, function(err, docs){
-        res.json((err === null) ? { '_id': docs._id } : { msg: err });
-    });
+    var classes = db.get('classes');
+    if(req.body.name == undefined || req.body.description == undefined){
+        res.status(400).json({error: "Missing parameters: name and description are mandatory."});
+    }
+    else{
+        classes.insert(req.body, function(err, myClass){
+            res.json((err === null) ? myClass : { error: err });
+        });        
+    }
 });
 
 //DELETE delete a class
 router.delete('/:id', function(req, res) {
     var db = req.db;
-    var collection = db.get('classes');
+    var classes = db.get('classes');
     var classToDelete = req.params.id;
-    collection.remove({ '_id' : classToDelete }, function(err,docs) {
-        res.json((err === null) ? {} : { msg:'error: ' + err });
+    classes.findOne({_id: classToDelete},{}, function(err, myClass){
+        if(err){
+            res.json({error: err});
+        }
+        else if(myClass == null){
+            res.status(404).json({ error: "Class with id '" + classToDelete + "' does not exist."});
+        }
+        else{
+            classes.remove({ _id: classToDelete }, function(err,myClass) {
+                res.json((err === null) ? {} : { error: err });
+            });
+        }
     });
 });
-
+    
 //PUT update one or more attribute of a class (name, description)
 //"{"name": "", "description": ""}
 router.put('/:id', function(req, res) {
     var extend = require('util')._extend
     var db = req.db;
-    var collection = db.get('classes');
-    var classToUpdate = req.params.id;
-    var output = extend({},{ '_id' : classToUpdate });
-    extend(output,  req.body);
-    collection.update({ '_id' : classToUpdate }, req.body, function(err) {
-        res.json((err === null) ? output  : { msg:'error: ' + err });
+    var classes = db.get('classes');
+    var classToUpdate = req.params.id;    
+    classes.findOne({ _id: classToUpdate },{}, function(err, myClass){
+        if(err){
+            res.json({error: err});
+        }
+        else if(myClass == null){
+            res.status(404).json({ error: "Class with id '" + classToUpdate + "' does not exist."});
+        }
+        else{
+            classes.update({ _id: classToUpdate }, req.body, function(err) {
+                
+                var newClass = extend({},{ _id: classToUpdate });
+                extend(newClass,  req.body);
+                
+                res.json((err === null) ? newClass : { error: err });
+            });
+        }
     });
 });
 
 //GET list of all students in a class
 router.get('/:id/students', function(req, res, next) {
     var db = req.db;
-    var class_id = req.params.id;
-    var collection_classes = db.get('classes');
-    var collection_students = db.get('students');
-    collection_classes.findOne({_id: class_id}, function(err, myclass){
+    var classToShow = req.params.id;
+    var classes = db.get('classes');
+    var students = db.get('students');
+    classes.findOne({_id: classToShow}, function(err, myClass){
         if(err){
-            res.json({ msg:'error: ' + err });
+            res.json({error: err});
+        }
+        else if(myClass == null){
+            res.status(404).json({ error: "Class with id '" + classToShow + "' does not exist."});
         }
         else{
-            collection_students.find({_id: { $in: myclass.students } },{},function(err,students){ 
+            students.find({ _id: { $in: myClass.students } },{},function(err,studentList){ 
                 if(err){
-                    res.json({ msg:'error: ' + err });
+                    res.json({error: err});
                 }
                 else{
-                    res.json(students);
+                    res.json(studentList);
                 }
-                
             });
         }
     });
@@ -87,9 +128,30 @@ router.put('/:class_id/students/:student_id', function(req, res) {
     var ObjectId = mongo.ObjectID
     var classToModify = req.params.class_id;
     var studentToAdd = req.params.student_id;
-    var collection_classes = db.get('classes');
-    collection_classes.update({ '_id' : classToModify }, {$push: {students: ObjectId(studentToAdd)}}, function(err) {
-        res.json((err === null) ? {}  : { msg:'error: ' + err });
+    var classes = db.get('classes');
+    var students = db.get('classes');
+    classes.findOne({_id: classToModify}, function(err, myClass){
+        if(err){
+            res.json({error: err});
+        }
+        else if(myClass == null){
+            res.status(404).json({ error: "Class with id '" + classToModify + "' does not exist."});
+        }
+        else{
+            students.findOne({ _id: studentToAdd },{},function(err,myStudent){ 
+                if(err){
+                    res.json({error: err});
+                }
+                else if(myStudent == null){
+                    res.status(404).json({ error: "Student with id '" + studentToAdd + "' does not exist."});
+                }
+                else{
+                    classes.update({ '_id' : classToModify }, {$push: {students: ObjectId(studentToAdd)}}, function(err) {
+                        res.json((err === null) ? {}  : { error: err });
+                    });
+                }
+            });
+        }
     });
 });
 
@@ -101,9 +163,30 @@ router.delete('/:class_id/students/:student_id', function(req, res) {
     var ObjectId = mongo.ObjectID
     var classToModify = req.params.class_id;
     var studentToRemove = req.params.student_id;
-    var collection = db.get('classes');
-    collection.update({ '_id' : classToModify }, {$pull: {students: ObjectId(studentToRemove)}}, function(err) {
-        res.json((err === null) ? {} : { msg:'error: ' + err });
+    var classes = db.get('classes');
+    var students = db.get('classes');
+    classes.findOne({_id: classToModify}, function(err, myClass){
+        if(err){
+            res.json({error: err});
+        }
+        else if(myClass == null){
+            res.status(404).json({ error: "Class with id '" + classToModify + "' does not exist."});
+        }
+        else{
+            students.findOne({ _id: studentToRemove },{},function(err,myStudent){ 
+                if(err){
+                    res.json({error: err});
+                }
+                else if(myStudent == null){
+                    res.status(404).json({ error: "Student with id '" + studentToRemove + "' does not exist."});
+                }
+                else{
+                    classes.update({ '_id' : classToModify }, {$pull: {students: ObjectId(studentToRemove)}}, function(err) {
+                        res.json((err === null) ? {}  : { error: err });
+                    });
+                }
+            });
+        }
     });
 });
 

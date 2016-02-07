@@ -32,16 +32,20 @@ network_utils.prototype.get_free_port = function (db, callback) {
             callback(err, null);
         }
         else{
-            var portfinder = require('portfinder');
-            portfinder.basePort = parseInt(res.port, 10) + 1;
-            portfinder.getPort(function (err, free_port) {
-                if(err){
-                    callback(err, null);
-                }
-                else{
-                    callback(null,free_port);
-                }
-            });   
+            if(res == null){
+                callback(null, 8000);
+            }else{
+                var portfinder = require('portfinder');
+                portfinder.basePort = parseInt(res.port, 10) + 1;
+                portfinder.getPort(function (err, free_port) {
+                    if(err){
+                        callback(err, null);
+                    }
+                    else{
+                        callback(null,free_port);
+                    }
+                });
+            }
         }
     });
 }

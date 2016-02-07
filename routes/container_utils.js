@@ -86,6 +86,44 @@ container_utils.prototype.stop_container = function (container_name, callback) {
     });
 }
 
+container_utils.prototype.start_container_if_stopped = function (container_name, callback) {
+    
+    var container = docker.getContainer(container_name);
+    
+    container.start(function (err, data) {
+        if(err){
+            if (err.statusCode == 304){
+                callback(null, null);
+            }else{
+                callback(err, null);
+            }
+        }
+        else{
+            callback(null, data);
+        }
+    });
+}
+
+
+container_utils.prototype.stop_container_if_started = function (container_name, callback) {
+    
+    var container = docker.getContainer(container_name);
+    
+    container.stop(function (err, data) {
+        if(err){
+            if (err.statusCode == 304){
+                callback(null,null);
+            }else{
+                callback(err, null);
+            }
+        }
+        else{
+            callback(null, data);
+        }
+    });
+}
+
+
 container_utils.prototype.destroy_container = function (container_name, callback) {
     
     var container = docker.getContainer(container_name);

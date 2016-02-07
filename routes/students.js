@@ -10,33 +10,32 @@ var express = require('express');
 var router = express.Router();
 
 // GET list of all students
-router.get('/', function(req, res, next) {
+router.get('/', function(req, res) {
     var db = req.db;
     var students = db.get('students');
-    students.find({},{fields : {name: 1, surname: 1, username: 1}},function(err,docs){
+    students.find({},{fields : {name: 1, surname: 1, username: 1}},function(err,studentList){
         if(err){
             res.json({error: err});
         }
         else{
-            res.json(docs);
+            res.json(studentList);
         }
     });
 });
 
 // GET details of a student
-router.get('/:id/', function(req, res, next) {
+router.get('/:id/', function(req, res) {
     var db = req.db;
     var students = db.get('students');
     var studentToShow = req.params.id;
-    students.findOne({ '_id': studentToShow },{fields: {password: 0}},function(err,docs){
+    students.findOne({ '_id': studentToShow },{fields: {password: 0}},function(err,myStudent){
         if(err){
             res.json({error: err});
         }
-        else if(docs == null){
+        else if(myStudent == null){
             res.status(404).json({ error: "Student with id '" + studentToShow + "' does not exist."});
         }else{            
-            res.json(docs);
-
+            res.json(myStudent);
         }
     });
 });
@@ -49,13 +48,13 @@ router.post('/', function(req, res) {
         res.status(400).json({error: "Missing parameters: name, surname, username, and password are mandatory."});
     }
     else{
-        students.findOne({username: req.body.username},{},function(err,docs){
+        students.findOne({username: req.body.username},{},function(err,myStudent){
             if(err){
                 res.json({error: err});
             }
-            else if(docs == null){
-                students.insert(req.body, function(err, docs){
-                    res.json((err === null) ? docs : { error: err });
+            else if(myStudent == null){
+                students.insert(req.body, function(err, myStudent){
+                    res.json((err === null) ? myStudent : { error: err });
                 });
             }
             else{
@@ -69,17 +68,59 @@ router.post('/', function(req, res) {
 router.delete('/:id', function(req, res) {
     var db = req.db;
     var students = db.get('students');
+    var classes = db.get('classes');
+    classes.options.multi = true
+    var environments = db.get('environments');
+    var cu = require('./container_utils');
+    var container_utils = new cu;
     var studentToDelete = req.params.id;
-    students.findOne({_id: studentToDelete},{}, function(err, docs){
+    var mongo = req.mongo;
+    var ObjectId = mongo.ObjectID
+    students.findOne({_id: studentToDelete},{}, function(err, myStudent){
         if(err){
             res.json({error: err});
         }
-        else if(docs == null){
+        else if(myStudent == null){
             res.status(404).json({ error: "Student with id '" + studentToDelete + "' does not exist."});
         }
         else{
-            students.remove({ '_id' : studentToDelete }, function(err,docs) {
-                res.json((err === null) ? {} : { error: err });
+            classes.update({}, {$pull: {students: ObjectId(studentToDelete)}}, function(err, updatedClasses){
+                if(err){
+                    res.json({error: err});
+                }else{
+                    environments.find({owner: studentToDelete},{stream: true}).each(function(myEnvironment){
+                        container_utils.stop_container_if_started(studentToDelete+"."+myEnvironment.name, function(err, result){
+                            if(err){
+                                console.log(err);
+                                console.log("DELETE A STUDENT: error stopping container " + studentToDelete+"."+myEnvironment.name + ". It will live as an orphan.");
+                                //Here I should remove the owner
+                            }
+                            else{
+                                container_utils.destroy_container(studentToDelete+"."+myEnvironment.name, function(err, result){ 
+                                    if(err){
+                                        console.log(err);
+                                        console.log("DELETE A STUDENT: error destroying container " + studentToDelete+"."+myEnvironment.name + ". It will live as an orphan.");
+                                        //Here I should remove the owner
+                                    }
+                                    else{
+                                        environments.remove({ '_id' : myEnvironment._id }, function(err, result) {
+                                            if(err){
+                                                console.log(err);
+                                                console.log("DELETE A STUDENT: error removing container from DB");
+                                            }
+                                        });
+                                    } 
+                                });
+                            }
+                        });
+                    }).error(function(err){
+                        res.json({error: err});
+                    }).success(function(){
+                        students.remove({ '_id' : studentToDelete }, function(err,myStudent) {
+                            res.json((err === null) ? {} : { error: err });
+                        });  
+                    });  
+                }
             });
         }
     });
@@ -91,11 +132,11 @@ router.put('/:id', function(req, res) {
     var db = req.db;
     var students = db.get('students');
     var studentToUpdate = req.params.id;
-    students.findOne({ _id: studentToUpdate },{}, function(err, docs){
+    students.findOne({ _id: studentToUpdate },{}, function(err, myStudent){
         if(err){
             res.json(err);
         }
-        else if(docs == null){
+        else if(myStudent == null){
             res.status(404).json({ error: "Student with id '" + studentToUpdate + "' does not exist."});
         }
         else{

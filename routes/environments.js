@@ -15,35 +15,58 @@ var container = new container_utils;
 //list all environments, list all environments for a student, create an environment for a student, start an environments, stop an environments, remove an environments, update an attribute (name, description) 
 
 //GET list of all environments
-router.get('/', function(req, res, next) {
+router.get('/', function(req, res) {
     var db = req.db;
-    var collection = db.get('environments');
-    collection.find({},{},function(err,docs){
-        res.json(docs);
+    var environments = db.get('environments');
+    environments.find({},{fields: {name: 1, owner: 1}},function(err,myEnvironments){
+        if(err){
+            res.json({error: err});
+        }
+        else{
+            res.json(myEnvironments);
+        }        
     });
 });
 
 //GET details of an environments
-router.get('/:id/details', function(req, res, next) {
+router.get('/:id/', function(req, res) {
     var db = req.db;
-    var collection = db.get('environments');
+    var environments = db.get('environments');
     var environmentToShow = req.params.id;
-    collection.find({ '_id': environmentToShow },{},function(err,docs){
-        res.json(docs);
+    environments.findOne({ '_id': environmentToShow },{},function(err,myEnvironment){
+        if(err){
+            res.json({error: err});
+        }
+        else if(myEnvironment == null){
+            res.status(404).json({ error: "Environment with id '" + environmentToShow + "' does not exist."});
+        }else{            
+            res.json(myEnvironment);
+        }
     });
 });
 
 //GET list of all the environments for a student
-router.get('/owner/:id', function(req, res, next) {
+router.get('/owner/:id', function(req, res) {
     var db = req.db;
-    var id = req.params.id;
-    var collection = db.get('classes');
-    collection.find({owner: id}, function(err, environments){
+    var studentToShow = req.params.id;
+    var environments = db.get('environments');
+    var students = db.get('students');
+    students.findOne({ _id: studentToShow}, {}, function(err, myStudent){
         if(err){
-            res.json({ msg:'error: ' + err });
+            res.json({ error: err });
+        }
+        else if (myStudent == null){
+            res.status(404).json({ error: "Student with id '" + studentToShow + "' does not exist."});
         }
         else{
-            res.json(environments);
+            environments.find({owner: studentToShow}, function(err, environmentList){
+                if(err){
+                    res.json({ error: err });
+                }
+                else{
+                    res.json(environmentList);
+                }
+            });        
         }
     });
 });
@@ -53,12 +76,25 @@ router.get('/owner/:id', function(req, res, next) {
 router.put('/:id', function(req, res) {
     var extend = require('util')._extend
     var db = req.db;
-    var collection = db.get('environments');
+    var environments = db.get('environments');
     var environmentToUpdate = req.params.id;
-    var output = extend({},{ '_id' : environmentToUpdate });
-    extend(output,  req.body);
-    collection.update({ '_id' : environmentToUpdate }, req.body, function(err) {
-        res.json((err === null) ? output  : { msg:'error: ' + err });
+    
+    environments.findOne({ _id: environmentToUpdate },{}, function(err, myEnvironment){
+        if(err){
+            res.json(err);
+        }
+        else if(myEnvironment == null){
+            res.status(404).json({ error: "Environment with id '" + environmentToUpdate + "' does not exist."});
+        }
+        else{
+            environments.update({ '_id' : environmentToUpdate }, req.body, function(err) {
+                
+                var newEnvironment = extend({},{ '_id' : environmentToUpdate });
+                extend(newEnvironment,  req.body);
+                
+                res.json((err === null) ? newEnvironment : { error: err });
+            });
+        }
     });
 });
 
@@ -67,74 +103,132 @@ router.put('/:id', function(req, res) {
 router.post('/', function(req, res) {
     
     var db = req.db;
-    var collection_environments = db.get('environments');
-    var collection_students = db.get('students');
-    var extend = require('util')._extend
+    var environments = db.get('environments');
+    var students = db.get('students');
+    var extend = require('util')._extend;
     
-    collection_students.findOne({_id: req.body.owner}, function(err, student){
-        
-        if(err){
-            res.json({error: err});
+    if(req.body.name == undefined || req.body.description == undefined || req.body.owner == undefined){
+        res.status(400).json({error: "Missing parameters: name, description, and owner are mandatory."});
+    }
+    else{
+        if (req.body.status != undefined && req.body.status != "started" && req.body.status != "stopped" ){
+            res.status(400).json({error: "Status can be either started or stopped."});
         }
         else{
-            
-            var container_name = req.body.owner + "." + req.body.name;
-            
-            var nu = require('./network_utils');
-            var network_utils = new nu;
-            network_utils.get_free_port(db, function (err, container_port) {
+            var studentToModify = req.body.owner;
+
+            students.findOne({ _id: studentToModify}, function(err, myStudent){
                 if(err){
-                    callback(err, null);
+                    res.json({error: err});
+                }
+                else if(myStudent == null){
+                    res.status(404).json({ error: "Student with id '" + studentToModify + "' does not exist."});
                 }
                 else{
                     
-                    container.create_container(container_name, student.password, container_port, function(err, result){
-                        
+                    var containerName = req.body.owner + "." + req.body.name;
+
+                    var nu = require('./network_utils');
+                    var network_utils = new nu;
+                    
+                    network_utils.get_free_port(db, function (err, container_port) {
                         if(err){
-                            res.json({error: err});
+                            res.json({ error: err });
                         }
                         else{
                             
-                            var output = extend({},{ 'port' : container_port });
-                            extend(req.body, output);
-                            
-                            collection_environments.insert(req.body, function(err, docs){
+                            container.create_container(containerName, myStudent.password, container_port, function(err, result){
                                 
-                                res.json((err === null) ? { '_id': docs._id } : { msg: err });
-                                
-                            });  
-                        }  
+                                if(err){
+                                    res.json({ error: err });
+                                }
+                                else{
+                                    
+                                    if (req.body.port == undefined && req.body.status == undefined){
+                                        var output = extend({},{ port: container_port, status: "stopped" });
+                                        extend(req.body, output);
+                                    }
+                                    else if (req.body.port == undefined && req.body.status != undefined){
+                                        var output = extend({},{ port: container_port });
+                                        extend(req.body, output);
+                                    }
+                                    else if (req.body.port != undefined && req.body.status == undefined){
+                                        var output = extend({},{ status: "stopped" });
+                                        extend(req.body, output);
+                                        req.body.port = container_port;
+                                    }
+                                    else{
+                                        req.body.port = container_port;
+                                    }                                    
+                                    
+                                    environments.insert(req.body, function(err, docs){
+                                        
+                                        if(err){
+                                            res.json({ error: err });
+                                        }
+                                        else{
+                                            if (req.body.status == "started"){
+                                                container.start_container(containerName, function(err, result){
+                                                    if (err){
+                                                        res.json({ error: err });
+                                                    }
+                                                    else{
+                                                        res.json(docs);
+                                                    }
+                                                });
+                                            }
+                                            else{
+                                                res.json(docs);
+                                            }
+                                        }                                        
+                                    });  
+                                }  
+                            });
+                        }
                     });
                 }
-            });
+            }); 
         }
-    });
+    }
 });
 
 //DELETE delete an environments for a students
 router.delete('/:id', function(req, res) {
     var db = req.db;
-    var collection = db.get('environments');
-    var environmentToDelete = req.params.id;    
-    collection.findOne({ '_id' : environmentToDelete }, function(err, environment){
+    var environments = db.get('environments');
+    var environmentToDelete = req.params.id;
+    var mongo = req.mongo;
+    var ObjectId = mongo.ObjectID
+    environments.findOne({ '_id' : environmentToDelete }, function(err, myEnvironment){
         if(err){
-            res.json({error: err});
+            res.json({ error: err });
+        }
+        else if(myEnvironment == null){
+            res.status(404).json({ error: "Environment with id '" + environmentToDelete + "' does not exist."});
         }
         else{
-            var environment_name = environment.name;
-            var environment_owner = environment.owner;
+            
+            var environment_name = myEnvironment.name;
+            var environment_owner = myEnvironment.owner;
             var container_name = environment_owner + "." + environment_name;
-            container.destroy_container(container_name, function(err, result){ 
+            
+            container.stop_container_if_started(container_name, function(err, result){
                 if(err){
-                    res.json({error: err});                
+                    res.json({error: err});
                 }
                 else{
-                    collection.remove({ '_id' : environmentToDelete }, function(err) {
-                        res.json((err === null) ? {} : { msg:'error: ' + err });
+                    container.destroy_container(container_name, function(err, result){ 
+                        if(err){
+                            res.json({error: err});
+                        }
+                        else{
+                            environments.remove({ '_id' : environmentToDelete }, function(err) {
+                                res.json((err === null) ? {} : { error: err });
+                            });                
+                        } 
                     });                
-                    
-                } 
-            });                
+                }
+            });
         }
     });    
 });
@@ -142,45 +236,54 @@ router.delete('/:id', function(req, res) {
 //PUT start/stop an environment
 router.put('/:id/status/:status', function(req, res) {
     var db = req.db;
-    var collection = db.get('environments');
+    var environments = db.get('environments');
     var environmentToModify = req.params.id;
     var newStatus = req.params.status;
     
-    collection.findOne({ '_id' : environmentToModify }, function(err, environment){
-        if(err){
-            res.json({error: err});
-        }
-        else{
-            var environment_name = environment.name;
-            var environment_owner = environment.owner;
-            var container_name = environment_owner + "." + environment_name;
-            if(newStatus == 'start'){
-                container.start_container(container_name, function(err, result){ 
-                    if(err){
-                        res.json({error: err});                
-                    }
-                    else{
-                        collection.update({ '_id' : environmentToModify }, {$set: {status: newStatus}}, function(err) {
-                            res.json((err === null) ? {_id: environmentToModify, status: newStatus}  : { msg:'error: ' + err });
-                        });                
-                        
-                    } 
-                });                
+    if(newStatus != "started" && newStatus != "stopped"){
+        res.status(400).json({error: "Status can be either started or stopped."});
+    }
+    else{
+        environments.findOne({ '_id' : environmentToModify }, function(err, myEnvironment){
+            if(err){
+                res.json({error: err});
             }
-            else if(newStatus == 'stop'){
-                container.stop_container(container_name, function(err, result){ 
-                    if(err){
-                        res.json({error: err});                
-                    }
-                    else{
-                        collection.update({ '_id' : environmentToModify }, {$set: {status: newStatus}}, function(err) {
-                            res.json((err === null) ? {_id: environmentToModify, status: newStatus}  : { msg:'error: ' + err });
-                        });                     
-                    } 
-                });
+            else if(myEnvironment == null){
+                res.status(404).json({ error: "Environment with id '" + environmentToModify + "' does not exist."});
             }
-        }
-    });    
+            else{
+                var environment_name = myEnvironment.name;
+                var environment_owner = myEnvironment.owner;
+                var container_name = environment_owner + "." + environment_name;
+                if(newStatus == 'started'){
+                    container.start_container(container_name, function(err, result){ 
+                        if(err){
+                            res.json({error: err});                
+                        }
+                        else{
+                            environments.update({ '_id' : environmentToModify }, {$set: {status: newStatus}}, function(err) {
+                                myEnvironment.status = newStatus;
+                                res.json((err === null) ? myEnvironment  : { error:  err });
+                            });                
+                        } 
+                    });                
+                }
+                else if(newStatus == 'stopped'){
+                    container.stop_container(container_name, function(err, result){ 
+                        if(err){
+                            res.json({error: err});                
+                        }
+                        else{
+                            environments.update({ '_id' : environmentToModify }, {$set: {status: newStatus}}, function(err) {
+                                myEnvironment.status = newStatus;
+                                res.json((err === null) ? myEnvironment  : { error:  err });
+                            });                     
+                        } 
+                    });
+                }
+            }
+        });       
+    }
 });
 
 module.exports = router;
