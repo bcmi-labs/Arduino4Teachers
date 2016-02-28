@@ -12,15 +12,15 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
-// New Code
+
+// Configuring MongoDB
 var mongo = require('mongodb');
 var monk = require('monk');
 var db = monk('localhost:27017/arduino4teachers');
 
-var routes = require('./routes/index');
-var students = require('./routes/students');
-var classes = require('./routes/classes');
-var environments = require('./routes/environments');
+// Configuring Passport
+var passport = require('passport');
+var expressSession = require('express-session');
 
 var app = express();
 
@@ -36,12 +36,25 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.use(expressSession({secret: 'Arduino.org'}));
+app.use(passport.initialize());
+app.use(passport.session());
+
 // Make our db and mongo accessible to our router
 app.use(function(req,res,next){
     req.db = db;
     req.mongo = mongo;
     next();
 });
+
+// Initialize Passport
+var initPassport = require('./passport/init');
+initPassport(passport);
+
+var routes = require('./routes/index')(passport);
+var students = require('./routes/students');
+var classes = require('./routes/classes');
+var environments = require('./routes/environments');
 
 app.use('/', routes);
 app.use('/students', students);

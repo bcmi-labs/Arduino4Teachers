@@ -5,8 +5,9 @@
  * implement paging in lists
  * store passwords in an encripted way
  * put the configuration file in a global position
- * check the error codes (404, 500, and so on) for all the REST API calls (class, student, environment)
- * implement authentication for all the operations (the teacher should be able to perform all the operations while students should be able to perform operations only on their environments)
+ * when the username of a student is modified a check should be performed to avoid the new username already exists
+ * when the password of a student is modified the password in the corresponding containers should be updated
+ * when the name of an environment is updated then the name of the corresponding container should be updated correspondingly
  * insert information about types in the README file
  * ~~in the "list of all students in a class" operation return an error if the class does not exist~~
  * ~~when a student is deleted, she should be removed from her classes and her environments should be removed~~
@@ -20,3 +21,5 @@
  * ~~in the "create an environments for a student" and "delete an environments for a student" return an error if the student does not exist~~
  * ~~in the "start/stop an environment" return an error if the environment does not exist~~
  * ~~check and correct the return types for all the REST APIs (class, student, environment)~~
+ * ~~implement authentication for all the operations (the teacher should be able to perform all the operations while students should be able to perform operations only on their environments)~~
+ * ~~check the error codes (404, 500, and so on) for all the REST API calls (class, student, environment)~~
