@@ -1,5 +1,9 @@
 {
         "config":{
+                "administrator":{
+                        "username": "",
+                        "password": ""
+                },
                 "server":{
                         "interface": "",
                         "port": "",
