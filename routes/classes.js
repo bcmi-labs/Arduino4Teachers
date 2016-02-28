@@ -208,7 +208,7 @@ router.put('/:class_id/students/:student_id', isAuthenticated, function(req, res
                     }
                     else{
                         classes.update({ '_id' : classToModify }, {$push: {students: ObjectId(studentToAdd)}}, function(err) {
-                            if(){
+                            if(err === null){
                                 res.json({});
                             }
                             else{
