@@ -20,6 +20,14 @@ Student access panel:
 
 ## REST API
 
+### Authentication 
+
+|Method    |URL                                           |Semantics                        |Parameters                            |Return Type                |
+|----------|----------------------------------------------|---------------------------------|--------------------------------------|---------------------------|
+| `POST`   | /login                                       | authenticate to the sytem       | username (body), password (body)     | -                         | 
+| `GET`    | /logout                                      | destroy the session             | -                                    | -                         |
+
+
 ### Classes
 
 |Method    |URL                                           |Semantics                        |Parameters                            |Return Type         |
@@ -45,14 +53,14 @@ Student access panel:
 
 ### Environments
 
-|Method    |URL                                                   |Semantics                                 |Parameters                                  |Return Type           |
-|----------|------------------------------------------------------|------------------------------------------|--------------------------------------------|----------------------|
-| `GET`    | /environments                                        | list of all environments                 | -                                          | array of environment | 
-| `GET`    | /environments/(environment_uuid)                     | details about an environments            | environment_uuid (url)                     | environment          |
-| `POST`   | /environments                                        | create an environment                    | environment (body)                         | environment          | 
-| `DELETE` | /environments/(environment_uuid)                     | remove an environment                    | environment_uuid (url)                     | -                    | 
-| `PUT`    | /environments/(environment_uuid)/status/{start|stop} | start/stop and environment               | environment_uuid (url)                     | environment          | 
-| `PUT`    | /environments/(environment_uuid)                     | change environment information           | environment_uuid (url), environment (body) | student              |
-| `GET`    | /environments/owner/(student_uuid)                   | list of all the environment for a student| student_uuid (url)                         | array of environment | 
+|Method    |URL                                                      |Semantics                                 |Parameters                                  |Return Type           |
+|----------|---------------------------------------------------------|------------------------------------------|--------------------------------------------|----------------------|
+| `GET`    | /environments                                           | list of all environments                 | -                                          | array of environment | 
+| `GET`    | /environments/(environment_uuid)                        | details about an environments            | environment_uuid (url)                     | environment          |
+| `POST`   | /environments                                           | create an environment                    | environment (body)                         | environment          | 
+| `DELETE` | /environments/(environment_uuid)                        | remove an environment                    | environment_uuid (url)                     | -                    | 
+| `PUT`    | /environments/(environment_uuid)/status/{start or stop} | start/stop and environment               | environment_uuid (url)                     | environment          | 
+| `PUT`    | /environments/(environment_uuid)                        | change environment information           | environment_uuid (url), environment (body) | student              |
+| `GET`    | /environments/owner/(student_uuid)                      | list of all the environment for a student| student_uuid (url)                         | array of environment | 
 
 
